@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "598721200005",
+    "project_id": "cabal-001",
+    "storage_bucket": "cabal-001.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:598721200005:android:3729585738d80fa65c8eec",
+        "android_client_info": {
+          "package_name": "com.example.airloot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKurgWHdPSbpaThzZl5y_3ZVX2dB2Pk8k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

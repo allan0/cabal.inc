@@ -1,0 +1,82 @@
+name: cabal
+description: A Flutter project for quest-based user engagement in cabals.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core UI & State
+  provider: ^6.1.2
+  flutter_animate: ^4.5.0
+  intl: ^0.19.0
+  page_transition: ^2.1.0
+
+  # Icons & Styling
+  cupertino_icons: ^1.0.8
+  font_awesome_flutter: ^10.7.0
+  fl_chart: ^0.68.0
+  marquee: ^2.2.3
+  
+  logging: ^1.2.0
+
+  # Backend & Services
+  firebase_core: ^2.32.0 
+  supabase_flutter: ^2.5.8 
+  http: ^1.2.0
+  xml: ^6.5.0
+  dio: ^5.4.3+1
+
+  # Wallet & Web3
+  solana_mobile_client: ^0.1.0 
+  webview_flutter: ^4.7.0
+  web3dart: ^2.7.2
+  reown_appkit: 1.2.0 # --- PINNED TO EXACT VERSION FOR STABILITY ---
+
+  # Utilities
+  flutter_dotenv: ^5.1.0
+  flutter_web_auth_2: ^4.1.0
+  flutter_markdown: ^0.7.1
+  url_launcher: ^6.3.0
+  video_player: ^2.8.6
+  image_picker: ^1.1.2
+  uuid: ^4.4.0
+  collection: ^1.18.0
+  bs58: ^1.0.2 
+  share_plus: ^7.2.2 
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/videos/
+    - assets/fonts/
+    - assets/audio/
+    # - .env # <-- REMOVED FOR WEB SECURITY
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf

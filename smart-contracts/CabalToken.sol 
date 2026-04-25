@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title CabalToken
+ * @dev The native ERC20 token for the Cabal platform.
+ * Total Supply: 100,000,000 $CBL.
+ * Minting is restricted to the owner. After deployment, ownership will be
+ * transferred to the CabalTGE contract to ensure supply integrity.
+ */
+contract CabalToken is ERC20, Ownable {
+    // 100 Million total supply with 18 decimals
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10**18;
+
+    /**
+     * @dev Sets the name, symbol, and initial owner of the token.
+     */
+    constructor() ERC20("Cabal", "CBL") Ownable(msg.sender) {}
+
+    /**
+     * @dev Creates `amount` new tokens for `to`.
+     * Can only be called by the owner of this contract.
+     * Enforces that the total supply does not exceed the maximum supply.
+     */
+    function mint(address to, uint256 amount) public onlyOwner {
+        require(totalSupply() + amount <= MAX_SUPPLY, "CabalToken: Max supply exceeded");
+        _mint(to, amount);
+    }
+}
