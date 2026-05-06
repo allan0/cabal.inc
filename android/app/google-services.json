@@ -12,7 +12,12 @@
           "package_name": "com.example.airloot"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "598721200005-36mep01763qvu5p8iudt1dfj8as076t9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAKurgWHdPSbpaThzZl5y_3ZVX2dB2Pk8k"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "598721200005-36mep01763qvu5p8iudt1dfj8as076t9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "598721200005-13m1hsk0d9vburq6i8riq0iegf06m7o4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.airloot"
+              }
+            }
+          ]
         }
       }
     }

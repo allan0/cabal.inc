@@ -1,6 +1,5 @@
 // lib/config.dart
+const String supabaseUrl = 'https://ktrnvwczujqyvxdhwfim.supabase.co';
+const String supabaseAnonKey = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0cm52d2N6dWpxeXZ4ZGh3ZmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDU1ODAsImV4cCI6MjA5MjY4MTU4MH0.qx7AxaQiayNFOmDbXN-fFh_VPXpnUsT0JP00jboeA1Q'''; // ← Put your new key
 
-// This is a conditional export.
-// It tells Dart to use the mobile version by default, but switch to the web
-// version if the app is compiled for the web (where 'dart.library.html' exists).
-export 'config_mobile.dart' if (dart.library.html) 'config_web.dart';
+// Firebase is already configured via google-services.json

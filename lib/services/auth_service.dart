@@ -1,82 +1,106 @@
+// lib/services/auth_service.dart
 import 'package:flutter/material.dart';
-
-import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// import 'package:walletconnect_modal_flutter/walletconnect_modal_flutter.dart'; // Example
-// import 'package:flutter_web_auth/flutter_web_auth.dart'; // Example for general OAuth
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'supabase_service.dart';
 
 class AuthService {
-  // final WalletConnectModalService _wcService = WalletConnectModalService(
-  //   communityId: "YOUR_WALLETCONNECT_PROJECT_ID", // Get from WalletConnect Cloud
-  //   metadata: PairingMetadata(
-  //       name: 'AirLoot',
-  //       description: 'AirLoot Quests',
-  //       url: 'https://yourapp.com',
-  //       icons: ['https://yourapp.com/logo.png'],
-  //   ),
-  // );
+  final SupabaseService _supabaseService = SupabaseService();
 
-  // Future<void> initWalletConnect() async {
-  //   await _wcService.init();
-  // }
+  // ====================== EMAIL AUTH ======================
+
+  Future<AuthResponse> signUpWithEmail(String email, String password, {String? referralCode}) async {
+    return await _supabaseService.signUpUser(email, password, referralCode: referralCode);
+  }
+
+  Future<AuthResponse> signInWithEmail(String email, String password) async {
+    return await _supabaseService.signInUser(email, password);
+  }
+
+  // ====================== OAUTH (Google, Discord, Twitter) ======================
+
+  /// Recommended: Use Supabase's built-in OAuth
+  Future<bool> signInWithGoogle() async {
+    return await _supabaseService.signInWithGoogle();
+  }
+
+  Future<bool> signInWithDiscord() async {
+    return await _supabaseService.signInWithDiscord();
+  }
+
+  Future<bool> signInWithTwitter() async {
+    return await _supabaseService.signInWithTwitter();
+  }
+
+  // ====================== WALLET CONNECTIONS (Stubs for now) ======================
 
   Future<String?> connectEthereumWallet() async {
-    // TODO: Implement actual Ethereum wallet connection
-    // Example using a placeholder:
-    // await _wcService.open(view: WalletConnectModalConnectView.qrCode);
-    // if (_wcService.isConnected) {
-    //   return _wcService.session?.accounts.firstWhere((acc) => acc.startsWith('eip155:')).split(':').last;
-    // }
-    print("Attempting to connect Ethereum Wallet (Stub)");
-    // Simulate a connection for now
+    debugPrint("Attempting to connect Ethereum Wallet...");
+    // TODO: Integrate Reown AppKit / Web3Modal here
     await Future.delayed(const Duration(seconds: 1));
-    return "0xYourEthereumAddressPlaceholder"; // Placeholder
+    return "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"; // Placeholder
   }
 
   Future<String?> connectSolanaWallet() async {
-    // TODO: Implement actual Solana wallet connection
-    print("Attempting to connect Solana Wallet (Stub)");
+    debugPrint("Attempting to connect Solana Wallet...");
+    // TODO: Integrate Solana Mobile or Phantom
     await Future.delayed(const Duration(seconds: 1));
-    return "YourSolanaAddressPlaceholder"; // Placeholder
+    return "YourSolanaAddressPlaceholder..."; // Placeholder
   }
-  
+
   Future<String?> connectBaseWallet() async {
-    // TODO: Implement actual Base wallet connection (likely similar to Ethereum)
-    print("Attempting to connect Base Wallet (Stub)");
+    debugPrint("Attempting to connect Base Wallet...");
+    // Usually same as Ethereum (EVM)
     await Future.delayed(const Duration(seconds: 1));
-    return "0xYourBaseAddressPlaceholder"; // Placeholder
+    return "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"; // Placeholder
   }
 
-  Future<bool> signInWithTwitter(String? targetUrl) async {
-    // TODO: Implement actual Twitter sign-in/action verification
-    // For now, just launch the URL if provided
-    if (targetUrl != null && await canLaunchUrl(Uri.parse(targetUrl))) {
-      await launchUrl(Uri.parse(targetUrl), mode: LaunchMode.externalApplication);
-      return true; // Assume success for stub
+  // ====================== SOCIAL ACTIONS ======================
+
+  Future<bool> signInWithTwitterAction(String? targetUrl) async {
+    if (targetUrl != null && targetUrl.isNotEmpty) {
+      final uri = Uri.parse(targetUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return true;
+      }
     }
-    print("Attempting to sign in with Twitter (Stub)");
-    return false; // Placeholder
+    debugPrint("No valid Twitter URL provided.");
+    return false;
   }
 
-  Future<bool> signInWithDiscord(String? targetUrl) async {
-    // TODO: Implement actual Discord sign-in/action verification
-    if (targetUrl != null && await canLaunchUrl(Uri.parse(targetUrl))) {
-      await launchUrl(Uri.parse(targetUrl), mode: LaunchMode.externalApplication);
-      return true; // Assume success for stub
+  Future<bool> signInWithDiscordAction(String? targetUrl) async {
+    if (targetUrl != null && targetUrl.isNotEmpty) {
+      final uri = Uri.parse(targetUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return true;
+      }
     }
-    print("Attempting to sign in with Discord (Stub)");
-    return false; // Placeholder
+    debugPrint("No valid Discord URL provided.");
+    return false;
   }
-  
+
   Future<void> launchActionUrl(String? urlString) async {
     if (urlString == null || urlString.isEmpty) {
-      print('No URL provided for action.');
-      throw Exception('No URL to launch.');
+      throw Exception('No URL provided to launch');
     }
+
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      print('Could not launch \$url');
-      throw Exception('Could not launch URL: \$urlString');
+      throw Exception('Could not launch $urlString');
     }
   }
+
+  // ====================== MISC ======================
+
+  Future<void> signOut() async {
+    await _supabaseService.signOutUser();
+  }
+
+  User? get currentUser => _supabaseService.getCurrentUser();
+
+  Stream<AuthState> get authStateChanges => _supabaseService.authStateChanges;
 }

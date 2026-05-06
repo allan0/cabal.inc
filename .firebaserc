@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "cabal-001"
-  }
+    "default": "cabal-001",
+    "deploy": "cabal-001"
+  },
+  "targets": {},
+  "etags": {}
 }
