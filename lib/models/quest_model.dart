@@ -1,10 +1,13 @@
 // lib/models/quest_model.dart
-import 'package:flutter/foundation.dart' show debugPrint; 
-import '../utils/constants.dart'; // For QuestType, questTypeToString, questTypeFromString
+import 'package:flutter/foundation.dart';
+import '../utils/constants.dart'; // For QuestType enum
 
+/// Represents a quest within a Cabal.
+/// Maps directly to the 'quests' table in Supabase.
 class Quest {
-  final String id; 
-  final String? quest_section_id; // --- FIX: Added this to correctly map quests ---
+  final String id;
+  final String? questSectionId;
+  final String cabalId;
   String title;
   String description;
   String? detailedContent;
@@ -12,23 +15,25 @@ class Quest {
   QuestType type;
   String? actionUrl;
   String? iconName;
-  List<String> prerequisiteQuestIds; 
-  Duration? cooldownPeriod;
-  String? taskButtonText; 
-  bool requiresManualVerification;
+  List<String> prerequisiteQuestIds;
+  
+  // Cooldown & Repetition
+  Duration? cooldown; 
   int totalSteps;
+  
+  // UI & Requirements
+  String taskButtonText;
+  bool requiresManualVerification;
 
-  // User-specific status fields
-  bool isCompletedByUser;
-  bool isLockedForUser;
-  DateTime? lastCompletedByUserAt; 
-  bool isOnCooldownForUser;
-  int userCurrentStepsCompleted; 
-  String userQuestSpecificStatus; 
+  // User-Specific Progress (Populated via joins in SupabaseService)
+  String userStatus; // 'not_started', 'in_progress', 'pending_review', 'completed', 'rejected'
+  int userCurrentSteps;
+  DateTime? lastCompletedAt;
 
   Quest({
     required this.id,
-    this.quest_section_id, // --- FIX ---
+    this.questSectionId,
+    required this.cabalId,
     required this.title,
     required this.description,
     this.detailedContent,
@@ -37,138 +42,97 @@ class Quest {
     this.actionUrl,
     this.iconName,
     this.prerequisiteQuestIds = const [],
-    this.cooldownPeriod,
-    this.taskButtonText,
-    this.requiresManualVerification = false,
+    this.cooldown,
     this.totalSteps = 1,
-    this.isCompletedByUser = false,
-    this.isLockedForUser = true, 
-    this.lastCompletedByUserAt,
-    this.isOnCooldownForUser = false,
-    this.userCurrentStepsCompleted = 0,
-    this.userQuestSpecificStatus = 'not_started', 
+    this.taskButtonText = 'Complete Task',
+    this.requiresManualVerification = false,
+    this.userStatus = 'not_started',
+    this.userCurrentSteps = 0,
+    this.lastCompletedAt,
   });
 
   factory Quest.fromSupabase(Map<String, dynamic> data) {
-    final idValue = data['id'];
-    if (idValue == null) {
-      throw ArgumentError("Quest.fromSupabase: 'id' field cannot be null.");
-    }
-    final String finalId = idValue.toString(); 
-
-    final titleValue = data['title'] ?? 'Untitled Quest';
-    final descriptionValue = data['description'] ?? 'No description.';
+    // Handle the QuestType conversion safely
+    final typeStr = data['type'] as String? ?? 'custom';
     
-    String? typeString = data['type'] as String?; 
-    QuestType finalType = questTypeFromString(typeString);
-    
-    List<String> prereqIds = [];
-    if (data['prerequisite_quest_ids'] != null && data['prerequisite_quest_ids'] is List) {
-        prereqIds = List<String>.from((data['prerequisite_quest_ids'] as List).map((item) => item.toString()));
-    }
-
     return Quest(
-      id: finalId, 
-      quest_section_id: data['quest_section_id'] as String?, // --- FIX ---
-      title: titleValue, 
-      description: descriptionValue, 
-      detailedContent: data['detailed_content'] as String?, 
+      id: data['id'] as String,
+      questSectionId: data['quest_section_id'] as String?,
+      cabalId: data['cabal_id'] as String,
+      title: data['title'] as String? ?? 'Untitled Quest',
+      description: data['description'] as String? ?? '',
+      detailedContent: data['detailed_content'] as String?,
       xpReward: (data['xp_reward'] ?? 0) as int,
-      type: finalType, 
-      actionUrl: data['action_url'] as String?, 
-      iconName: data['icon_name'] as String?, 
-      prerequisiteQuestIds: prereqIds,
-      cooldownPeriod: data['cooldown_period_seconds'] != null && (data['cooldown_period_seconds'] as num) > 0
-          ? Duration(seconds: (data['cooldown_period_seconds'] as num).toInt())
+      type: questTypeFromString(typeStr),
+      actionUrl: data['action_url'] as String?,
+      iconName: data['icon_name'] as String?,
+      prerequisiteQuestIds: data['prerequisite_quest_ids'] != null
+          ? List<String>.from(data['prerequisite_quest_ids'])
+          : [],
+      cooldown: data['cooldown_period_seconds'] != null
+          ? Duration(seconds: data['cooldown_period_seconds'] as int)
           : null,
-      taskButtonText: data['task_button_text'] as String?, 
-      requiresManualVerification: (data['requires_manual_verification'] ?? false) as bool,
       totalSteps: (data['total_steps'] ?? 1) as int,
+      taskButtonText: data['task_button_text'] as String? ?? 'Complete Task',
+      requiresManualVerification: (data['requires_manual_verification'] ?? false) as bool,
+      
+      // These are usually null unless fetched via a join with user_quest_progress
+      userStatus: data['status'] as String? ?? 'not_started',
+      userCurrentSteps: (data['current_steps'] ?? 0) as int,
+      lastCompletedAt: data['last_completed_at'] != null 
+          ? DateTime.tryParse(data['last_completed_at'] as String) 
+          : null,
     );
   }
 
-  Map<String, dynamic> toSupabase() {
-    String typeString = questTypeToString(type); 
+  /// Logic to determine the current display status for the UI
+  String get statusText {
+    if (userStatus == 'completed') {
+      if (isOnCooldown) {
+        final remaining = cooldownTimeRemaining;
+        return "Cooldown: ${remaining.inHours}h ${remaining.inMinutes % 60}m";
+      }
+      return "Completed";
+    }
+    if (userStatus == 'pending_review') return "Under Review";
+    if (userStatus == 'rejected') return "Rejected - Try Again";
+    if (totalSteps > 1 && userCurrentSteps > 0) {
+      return "Progress: $userCurrentSteps/$totalSteps";
+    }
+    return taskButtonText;
+  }
 
+  /// Checks if the quest is currently in a cooldown state based on last completion
+  bool get isOnCooldown {
+    if (lastCompletedAt == null || cooldown == null) return false;
+    return DateTime.now().difference(lastCompletedAt!) < cooldown!;
+  }
+
+  Duration get cooldownTimeRemaining {
+    if (lastCompletedAt == null || cooldown == null) return Duration.zero;
+    final diff = cooldown! - DateTime.now().difference(lastCompletedAt!);
+    return diff.isNegative ? Duration.zero : diff;
+  }
+
+  bool get isLocked => userStatus == 'locked';
+  bool get isCompleted => userStatus == 'completed' && !isOnCooldown;
+
+  Map<String, dynamic> toSupabase() {
     return {
-      'id': id,
-      'quest_section_id': quest_section_id, // --- FIX ---
+      'cabal_id': cabalId,
+      'quest_section_id': questSectionId,
       'title': title,
       'description': description,
-      'detailed_content': detailedContent, 
+      'detailed_content': detailedContent,
       'xp_reward': xpReward,
-      'type': typeString, 
-      'action_url': actionUrl, 
-      'icon_name': iconName, 
+      'type': questTypeToString(type),
+      'action_url': actionUrl,
+      'icon_name': iconName,
       'prerequisite_quest_ids': prerequisiteQuestIds,
-      'cooldown_period_seconds': cooldownPeriod?.inSeconds,
-      'task_button_text': taskButtonText, 
-      'requires_manual_verification': requiresManualVerification,
+      'cooldown_period_seconds': cooldown?.inSeconds,
       'total_steps': totalSteps,
+      'task_button_text': taskButtonText,
+      'requires_manual_verification': requiresManualVerification,
     };
-  }
-
-  void updateUserStatus({
-    required Set<String> allCompletedQuestIdsForUserInCabal, 
-    required Map<String, DateTime?> userQuestCompletionTimestamps, 
-    required Map<String, int> userQuestStepsCompletedMap,      
-    required Map<String, String> userQuestActualStatusesMap,    
-  }) {
-    userQuestSpecificStatus = userQuestActualStatusesMap[id] ?? 'not_started';
-    isCompletedByUser = (userQuestSpecificStatus == 'completed');
-
-    if (isCompletedByUser && userQuestCompletionTimestamps.containsKey(id)) {
-        lastCompletedByUserAt = userQuestCompletionTimestamps[id]; 
-        if (cooldownPeriod != null && lastCompletedByUserAt != null) {
-            DateTime cooldownEndTime = lastCompletedByUserAt!.add(cooldownPeriod!);
-            isOnCooldownForUser = DateTime.now().isBefore(cooldownEndTime);
-        } else {
-            isOnCooldownForUser = false; 
-        }
-    } else {
-        lastCompletedByUserAt = null;
-        isOnCooldownForUser = false;
-    }
-
-    isLockedForUser = prerequisiteQuestIds.isNotEmpty &&
-                      !prerequisiteQuestIds.every((reqId) => allCompletedQuestIdsForUserInCabal.contains(reqId));
-
-    userCurrentStepsCompleted = userQuestStepsCompletedMap[id] ?? 0;
-    if (isCompletedByUser) { 
-        userCurrentStepsCompleted = totalSteps;
-    } else if (userQuestSpecificStatus == 'not_started' || userQuestSpecificStatus == 'rejected') {
-        userCurrentStepsCompleted = 0;
-    }
-  }
-
-  String get statusText {
-    if (isLockedForUser) return "Locked";
-    if (userQuestSpecificStatus == 'pending_verification') return "Pending Review";
-    if (userQuestSpecificStatus == 'rejected') return taskButtonText ?? "Try Again";
-
-    if (isCompletedByUser && isOnCooldownForUser && lastCompletedByUserAt != null && cooldownPeriod != null) {
-        final remaining = lastCompletedByUserAt!.add(cooldownPeriod!).difference(DateTime.now());
-        if (remaining.isNegative) { 
-            return taskButtonText ?? "Redo";
-        }
-        String h = remaining.inHours.toString().padLeft(2, '0');
-        String m = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-        String s = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-        if (remaining.inHours > 0) return "Cooldown: ${h}h ${m}m";
-        if (remaining.inMinutes > 0) return "Cooldown: ${m}m ${s}s";
-        return "Cooldown: ${s}s";
-    }
-
-    if (isCompletedByUser) { 
-        if (cooldownPeriod != null) return taskButtonText ?? "Redo"; 
-        return "Completed"; 
-    }
-
-    if (totalSteps > 1 && userCurrentStepsCompleted > 0 && userCurrentStepsCompleted < totalSteps) {
-        double progress = (userCurrentStepsCompleted / totalSteps * 100);
-        return "Progress (${progress.toStringAsFixed(0)}%)";
-    }
-    
-    return taskButtonText ?? "Start";
   }
 }

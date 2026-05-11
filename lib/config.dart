@@ -1,5 +1,33 @@
-// lib/config.dart
-const String supabaseUrl = 'https://ktrnvwczujqyvxdhwfim.supabase.co';
-const String supabaseAnonKey = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0cm52d2N6dWpxeXZ4ZGh3ZmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDU1ODAsImV4cCI6MjA5MjY4MTU4MH0.qx7AxaQiayNFOmDbXN-fFh_VPXpnUsT0JP00jboeA1Q; // ← Put your new key
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Firebase is already configured via google-services.json
+class AppConfig {
+  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  
+  static const String appName = "CABAL";
+  static const bool isTelegramMiniApp = true; 
+  static const String tonManifestUrl = "https://cabal-001.web.app/tonconnect-manifest.json";
+
+  // API Keys
+  static const String coingeckoApiKey = 'YOUR_KEY_HERE';
+
+  // Contract Addresses (Empty for now to prevent build errors)
+  static const String sepoliaRpcUrl = '';
+  static const String mainnetRpcUrl = '';
+  static const String sepoliaCabalTokenAddress = '';
+  static const String mainnetCabalTokenAddress = '';
+  static const String sepoliaCabalTgeAddress = '';
+  static const String mainnetCabalTgeAddress = '';
+  static const String sepoliaCabalAchievementsAddress = '';
+  static const String mainnetCabalAchievementsAddress = '';
+  static const String sepoliaPresaleAddress = '';
+  static const String mainnetPresaleAddress = '';
+  static const String sepoliaRealEstateDeedAddress = '';
+  static const String mainnetRealEstateDeedAddress = '';
+  static const String sepoliaEscrowAddress = '';
+  static const String mainnetEscrowAddress = '';
+  static const String sepoliaNftMarketplaceAddress = '';
+  static const String mainnetNftMarketplaceAddress = '';
+  static const String sepoliaMerchandiseStoreAddress = '';
+  static const String mainnetMerchandiseStoreAddress = '';
+}

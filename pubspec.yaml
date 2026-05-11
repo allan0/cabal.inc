@@ -10,45 +10,46 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # --- TON Blockchain (Critical for TON Native Focus) ---
+  ton: ^0.0.7
+  
+  # --- Backend & Auth ---
+  supabase_flutter: ^2.5.8 
+  firebase_core: ^2.32.0 
 
-  # Core UI & State
-  provider: ^6.1.2
-  flutter_animate: ^4.5.0
-  intl: ^0.19.0
-  page_transition: ^2.1.0
+  # --- Core UI & State ---
+  provider: ^6.1.5
+  flutter_animate: ^4.5.2
+  intl: ^0.20.2
+  page_transition: ^2.2.1
+  collection: ^1.19.1
+  uuid: ^4.5.1
+  logging: ^1.3.0
 
-  # Icons & Styling
+  # --- Icons & Styling ---
   cupertino_icons: ^1.0.8
   font_awesome_flutter: ^10.7.0
   fl_chart: ^0.68.0
-  marquee: ^2.2.3
-  
-  logging: ^1.2.0
+  marquee: ^2.3.0
+  shimmer: ^3.0.0
 
-  # Backend & Services
-  firebase_core: ^2.32.0 
-  supabase_flutter: ^2.5.8 
-  http: ^1.2.0
+  # --- Networking & Web3 ---
+  http: ^1.2.1
+  dio: ^5.5.0
   xml: ^6.5.0
-  dio: ^5.4.3+1
+  web3dart: ^2.7.3 
+  reown_appkit: ^1.2.0 
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.9.0
 
-  # Wallet & Web3
-  solana_mobile_client: ^0.1.0 
-  webview_flutter: ^4.7.0
-  web3dart: ^2.7.2
-  reown_appkit: 1.2.0 # --- PINNED TO EXACT VERSION FOR STABILITY ---
-
-  # Utilities
-  flutter_dotenv: ^5.1.0
-  flutter_web_auth_2: ^4.1.0
-  flutter_markdown: ^0.7.1
-  url_launcher: ^6.3.0
-  video_player: ^2.8.6
-  image_picker: ^1.1.2
-  uuid: ^4.4.0
-  collection: ^1.18.0
-  bs58: ^1.0.2 
-  share_plus: ^7.2.2 
+  # --- Utilities ---
+  flutter_dotenv: ^5.2.1
+  image_picker: ^1.2.0
+  video_player: ^2.9.1
+  share_plus: ^7.2.2
+  path_provider: ^2.1.3
+  bs58: ^1.0.2
 
 dev_dependencies:
   flutter_test:
@@ -63,7 +64,7 @@ flutter:
     - assets/videos/
     - assets/fonts/
     - assets/audio/
-    # - .env # <-- REMOVED FOR WEB SECURITY
+    - .env
 
   fonts:
     - family: Poppins
@@ -80,3 +81,7 @@ flutter:
     - family: NotoSans
       fonts:
         - asset: assets/fonts/NotoSans-Regular.ttf
+
+# Fixed: Removed leading space to ensure it's a top-level key
+dependency_overrides:
+  intl: ^0.20.2

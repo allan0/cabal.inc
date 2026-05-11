@@ -2,91 +2,131 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:page_transition/page_transition.dart';
-import 'home_nav_wrapper.dart';
-import '../widgets/diamond_mesh_background.dart';
-import '../widgets/app_logo_widget.dart';
 
-class InitialLoadingScreen extends StatefulWidget {
+import '../utils/app_colors.dart';
+import '../widgets/app_logo_widget.dart';
+import '../widgets/diamond_mesh_background.dart';
+
+class InitialLoadingScreen extends StatelessWidget {
   final Object? initializationError;
 
-  const InitialLoadingScreen({Key? key, required this.initializationError}) : super(key: key);
-
-  @override
-  State<InitialLoadingScreen> createState() => _InitialLoadingScreenState();
-}
-
-class _InitialLoadingScreenState extends State<InitialLoadingScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // If there's no error, navigate after a short delay to show the success animation.
-    if (widget.initializationError == null) {
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            PageTransition(
-              type: PageTransitionType.fade,
-              duration: 800.ms,
-              child: const HomeNavWrapper(showOnboarding: true),
-            ),
-          );
-        }
-      });
-    }
-  }
+  const InitialLoadingScreen({
+    Key? key, 
+    this.initializationError
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: AppColors.offBlack,
       body: DiamondMeshBackground(
         child: Center(
-          child: widget.initializationError != null
-              // If initialization failed, show the error state
-              ? Card(
-                  color: theme.cardColor.withOpacity(0.9),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FaIcon(FontAwesomeIcons.circleExclamation, size: 40, color: theme.colorScheme.error),
-                        const SizedBox(height: 16),
-                        Text("Initialization Failed", style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Could not connect to essential services. Please check your internet connection and restart the app.",
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Error: ${widget.initializationError.toString()}",
-                           textAlign: TextAlign.center,
-                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
-                        ),
-                      ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // --- 1. ANIMATED LOGO ---
+                const AppLogoWidget(logoHeight: 100)
+                    .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                    .shimmer(duration: 2000.ms, color: AppColors.gold.withOpacity(0.5))
+                    .scale(
+                      begin: const Offset(1.0, 1.0),
+                      end: const Offset(1.05, 1.05),
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut,
                     ),
-                  ),
-                ).animate().fadeIn()
-              // On success, show a brief final animation before navigating
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const AppLogoWidget(logoHeight: 80)
-                        .animate()
-                        .fadeIn(duration: 500.ms)
-                        .then(delay: 200.ms)
-                        .scale(duration: 400.ms, curve: Curves.elasticOut),
-                    const SizedBox(height: 24),
-                    Text("Cabal Initialized", style: theme.textTheme.titleMedium)
-                        .animate()
-                        .fadeIn(delay: 400.ms),
-                  ],
-                ),
+
+                const SizedBox(height: 32),
+
+                // --- 2. ERROR OR LOADING STATE ---
+                if (initializationError != null)
+                  _buildErrorState(theme)
+                else
+                  _buildLoadingState(theme),
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildLoadingState(ThemeData theme) {
+    return Column(
+      children: [
+        Text(
+          "INITIALIZING CABAL",
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.gold,
+            letterSpacing: 4,
+            fontWeight: FontWeight.bold,
+          ),
+        ).animate().fadeIn(delay: 400.ms),
+        const SizedBox(height: 16),
+        
+        // Custom sleek progress bar
+        SizedBox(
+          width: 200,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              backgroundColor: Colors.white.withOpacity(0.05),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+              minHeight: 2,
+            ),
+          ),
+        ).animate().fadeIn(delay: 600.ms),
+        
+        const SizedBox(height: 24),
+        
+        Text(
+          "CONNECTING TO TON BLOCKCHAIN",
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: AppColors.greyText.withOpacity(0.5),
+            letterSpacing: 1.2,
+          ),
+        ).animate(onPlay: (c) => c.repeat())
+         .fadeIn(duration: 1000.ms)
+         .then(delay: 1000.ms)
+         .fadeOut(duration: 1000.ms),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme) {
+    return Column(
+      children: [
+        const FaIcon(
+          FontAwesomeIcons.circleExclamation, 
+          color: AppColors.error, 
+          size: 32
+        ).animate().shake(),
+        const SizedBox(height: 16),
+        Text(
+          "INITIALIZATION FAILED",
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: AppColors.error,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          initializationError.toString(),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.greyText),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: () {
+            // Logic to restart app would go here
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGrey),
+          child: const Text("RETRY CONNECTION"),
+        ),
+      ],
+    ).animate().fadeIn();
   }
 }

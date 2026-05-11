@@ -1,0 +1,61 @@
+// lib/config.dart
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+/// Central configuration class for the Cabal Project.
+/// Handles environment variables and platform-specific constants.
+class AppConfig {
+  // ====================== SUPABASE CONFIG ======================
+  
+  // We use String.fromEnvironment for Web/Production and dotenv for Mobile/Local
+  static String get supabaseUrl => 
+      const String.fromEnvironment('SUPABASE_URL').isNotEmpty 
+      ? const String.fromEnvironment('SUPABASE_URL') 
+      : (dotenv.env['SUPABASE_URL'] ?? 'https://your-project-id.supabase.co');
+
+  static String get supabaseAnonKey => 
+      const String.fromEnvironment('SUPABASE_ANON_KEY').isNotEmpty 
+      ? const String.fromEnvironment('SUPABASE_ANON_KEY') 
+      : (dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key-here');
+
+  // ====================== TON BLOCKCHAIN CONFIG ======================
+  
+  /// The Manifest URL is mandatory for TON Connect 2.0.
+  /// It must be hosted on a HTTPS domain and contain app metadata.
+  static String get tonManifestUrl => 
+      kIsWeb 
+      ? "${Uri.base.origin}/tonconnect-manifest.json" 
+      : "https://cabal-001.web.app/tonconnect-manifest.json";
+
+  // ====================== API KEYS & EXTERNAL ======================
+
+  static String get coingeckoApiKey => 
+      dotenv.env['COINGECKO_API_KEY'] ?? 'YOUR_FREE_KEY';
+
+  static String get walletConnectProjectId => 
+      dotenv.env['WALLET_CONNECT_PROJECT_ID'] ?? 'your-wc-id';
+
+  // ====================== APP CONSTANTS ======================
+  
+  static const String appName = "Cabal";
+  static const String appDescription = "The Web3 Growth & Commerce Engine";
+  
+  // Default values for XP system (Matching your SQL function award_xp)
+  static const int xpStepBase = 100;
+
+  // ====================== UTILS ======================
+
+  /// Returns true if the app is running as a Telegram Mini App.
+  /// This is determined by checking the URL in web or specific platform channels.
+  static bool get isTelegramMiniApp {
+    if (!kIsWeb) return false;
+    return Uri.base.queryParameters.containsKey('tgWebAppStartParam') || 
+           Uri.base.fragment.contains('tgWebAppData');
+  }
+
+  /// Helper to get the correct explorer link based on current network.
+  static String getTransactionExplorer(String txHash) {
+    // TON Native focus: default to Tonviewer/Tonscan
+    return "https://tonviewer.com/transaction/$txHash";
+  }
+}
