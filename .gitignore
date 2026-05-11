@@ -16,3 +16,5 @@ build/
 .idea/
 .vscode/
 node_modules/
+cabal_all_code.txt
+*.deb
