@@ -1,129 +1,76 @@
-// lib/screens/dex_screen.dart
-import 'package:cabal/models/cabal_model.dart';
-import 'package:cabal/models/user_profile_model.dart';
-import 'package:cabal/services/web3_service.dart';
-import 'package:cabal/widgets/diamond_mesh_background.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
-import '../../features/wallet/application/wallet_provider.dart';
+import '../features/wallet/application/wallet_provider.dart';
+import '../utils/app_colors.dart';
+import '../widgets/diamond_mesh_background.dart';
 
 class DexScreen extends StatefulWidget {
-  final Cabal cabal;
-  final UserProfile userProfile;
-
-  const DexScreen({
-    Key? key,
-    required this.cabal,
-    required this.userProfile,
-  }) : super(key: key);
+  const DexScreen({super.key});
 
   @override
   State<DexScreen> createState() => _DexScreenState();
 }
 
-class _DexScreenState extends State<DexScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final TextEditingController _payController = TextEditingController();
-  final TextEditingController _receiveController = TextEditingController();
-
+class _DexScreenState extends State<DexScreen> {
+  final TextEditingController _amountController = TextEditingController();
   bool _isSwapping = false;
 
-  // Placeholder values for swap rate and balance
-  final double _swapRate = 1500.50; // e.g., 1 ETH = 1500.50 $TOKEN
-  final double _nativeBalance = 1.25; // e.g., 1.25 ETH
+  Future<void> _handleSwap() async {
+    final wallet = context.read<WalletProvider>();
+    if (!wallet.isConnectedEVM) return;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _payController.addListener(_onPayAmountChanged);
-  }
-
-  void _onPayAmountChanged() {
-    final payAmount = double.tryParse(_payController.text);
-    if (payAmount != null) {
-      final receiveAmount = payAmount * _swapRate;
-      _receiveController.text = receiveAmount.toStringAsFixed(4);
-    } else {
-      _receiveController.clear();
-    }
-  }
-
-  Future<void> _performSwap() async {
-    final walletProvider = context.read<WalletProvider>();
-    final web3Service = context.read<Web3Service>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    if (!walletProvider.isConnectedEVM) {
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("Please connect your EVM wallet first.")));
-      return;
-    }
-    
-    final payAmount = double.tryParse(_payController.text);
-    if (payAmount == null || payAmount <= 0) {
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("Please enter a valid amount to swap.")));
-      return;
-    }
-    
     setState(() => _isSwapping = true);
     
-    try {
-      // In a real implementation, you would:
-      // 1. Get the swap parameters (amounts, path) from a router contract or calculate them.
-      // 2. Encode the function call for the smart contract's swap method.
-      // 3. Use walletProvider to send the transaction.
-      // For now, we simulate the process.
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("Simulating swap... Please check your wallet to confirm.")));
-      await Future.delayed(const Duration(seconds: 3)); // Simulate wallet confirmation delay
-      
-      // final txHash = await web3Service.executeSwap(...);
-      
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Swap submitted successfully! Tx: 0x...placeholder")));
-      _payController.clear();
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Swap failed: $e"), backgroundColor: Colors.red));
-    } finally {
-      if(mounted) setState(() => _isSwapping = false);
+    // Logic: In a production DEX, we'd build a swap transaction via a Router contract (Uniswap/Pancake)
+    // Here we simulate the delay and the confirmation popup.
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (mounted) {
+      setState(() => _isSwapping = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Swap Successfully Composed. Check Wallet."), backgroundColor: AppColors.success),
+      );
     }
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    _payController.dispose();
-    _receiveController.dispose();
-    super.dispose();
-  }
-  
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chainSymbol = "ETH"; // This could be dynamic based on chainId in the future
-    final cabalTokenSymbol = widget.cabal.tokenSymbol ?? 'TOKEN';
-    
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text('${widget.cabal.name} Treasury & DEX'),
-        backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.85),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: FaIcon(FontAwesomeIcons.rightLeft), text: 'Swap'),
-            Tab(icon: FaIcon(FontAwesomeIcons.landmark), text: 'Treasury'),
-          ],
-        ),
-      ),
       body: DiamondMeshBackground(
         child: Padding(
-          padding: EdgeInsets.only(top: kToolbarHeight + (AppBar().preferredSize.height) + MediaQuery.of(context).padding.top),
-          child: TabBarView(
-            controller: _tabController,
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildSwapView(theme, chainSymbol, cabalTokenSymbol),
-              _buildTreasuryView(theme, cabalTokenSymbol),
+              const FaIcon(FontAwesomeIcons.rightLeft, size: 48, color: AppColors.gold),
+              const SizedBox(height: 24),
+              const Text("SWAP ASSETS", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              const SizedBox(height: 32),
+              
+              _buildSwapInput("PAY", "ETH"),
+              const SizedBox(height: 8),
+              const FaIcon(FontAwesomeIcons.circleArrowDown, size: 20, color: AppColors.greyText),
+              const SizedBox(height: 8),
+              _buildSwapInput("RECEIVE", "CBL"),
+              
+              const SizedBox(height: 40),
+              
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isSwapping ? null : _handleSwap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: _isSwapping 
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : const Text("PROCEED TO SWAP", style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
             ],
           ),
         ),
@@ -131,129 +78,36 @@ class _DexScreenState extends State<DexScreen> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSwapView(ThemeData theme, String chainSymbol, String cabalTokenSymbol) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildSwapInput(
-                theme: theme,
-                label: "You Pay",
-                controller: _payController,
-                tokenSymbol: chainSymbol,
-                balance: _nativeBalance,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: IconButton(
-                  icon: const FaIcon(FontAwesomeIcons.arrowDown),
-                  onPressed: () { /* TODO: Implement logic to swap input fields */ },
-                ),
-              ),
-              _buildSwapInput(
-                theme: theme,
-                label: "You Receive",
-                controller: _receiveController,
-                tokenSymbol: cabalTokenSymbol,
-                readOnly: true,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSwapping ? null : _performSwap,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: _isSwapping 
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white))
-                    : const Text('Swap'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildSwapInput({
-    required ThemeData theme,
-    required String label,
-    required TextEditingController controller,
-    required String tokenSymbol,
-    double? balance,
-    bool readOnly = false,
-  }) {
+  Widget _buildSwapInput(String label, String token) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: theme.textTheme.bodySmall),
-              if (balance != null)
-                Text("Balance: ${balance.toStringAsFixed(4)}", style: theme.textTheme.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 10, color: AppColors.greyText, letterSpacing: 1)),
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: controller,
-                  readOnly: readOnly,
-                  decoration: const InputDecoration(
-                    hintText: '0.0',
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  style: theme.textTheme.headlineSmall,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
-                  ],
+                child: TextField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  decoration: const InputDecoration(border: InputBorder.none, hintText: "0.0"),
                 ),
               ),
-              const SizedBox(width: 12),
-              Chip(
-                label: Text(tokenSymbol, style: theme.textTheme.titleMedium),
-                avatar: const FaIcon(FontAwesomeIcons.circleQuestion), // Replace with token logo later
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text(token, style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-  
-  Widget _buildTreasuryView(ThemeData theme, String cabalTokenSymbol) {
-    return Center(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const FaIcon(FontAwesomeIcons.buildingColumns, size: 40),
-              const SizedBox(height: 16),
-              Text('Treasury Information', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(
-                'Details about the $cabalTokenSymbol token, treasury balance, and transaction history will be displayed here. (Coming Soon)',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

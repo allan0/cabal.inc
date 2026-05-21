@@ -12,24 +12,29 @@ import 'utils/app_colors.dart';
 import 'services/supabase_service.dart';
 import 'services/ton_service.dart';
 import 'audio/audio_controller.dart';
+import 'features/wallet/application/wallet_provider.dart';
+import 'services/web3_service.dart';
 
 // Screens
 import 'screens/auth/login_screen.dart';
-import 'home/home_screen.dart';
-import 'screens/profile/profile_screen.dart';
+import 'screens/home_nav_wrapper.dart';
 import 'screens/initial_loading_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Main: .env file not found.");
+  // Load .env only on non-web platforms to prevent 404 build errors
+  if (!ThemeData().platform.toString().contains('web')) {
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("Config: .env not found, using system environment.");
+    }
   }
 
+  // Initialize Supabase
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
@@ -47,7 +52,15 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeManager()),
         Provider(create: (_) => SupabaseService()),
-        Provider(create: (_) => TonService()..initialize()), // Initialize here
+        Provider(create: (_) => Web3Service()..initialize()),
+        Provider(create: (_) => TonService()..initialize()),
+        ChangeNotifierProvider(
+          create: (context) => WalletProvider(
+            // WalletService is conditionally exported in core/services/wallet_service.dart
+            context.read<SupabaseService>().walletService, 
+            context.read<Web3Service>(),
+          ),
+        ),
         Provider(create: (_) => AudioController()),
       ],
       child: Consumer<ThemeManager>(
@@ -62,27 +75,29 @@ class MyApp extends StatelessWidget {
               colorScheme: const ColorScheme.dark(
                 primary: AppColors.gold,
                 secondary: AppColors.primaryAccent,
-                surface: AppColors.darkGrey,
+                surface: AppColors.surface,
+                background: AppColors.background,
+                error: AppColors.error,
               ),
-              // FIXED: CardTheme to CardThemeData
               cardTheme: CardThemeData(
-                color: AppColors.darkGrey,
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                ),
               ),
               textTheme: const TextTheme(
-                headlineMedium: TextStyle(color: AppColors.lightText, fontWeight: FontWeight.bold),
-                bodyMedium: TextStyle(color: AppColors.lightText),
-                bodySmall: TextStyle(color: AppColors.greyText),
+                headlineMedium: TextStyle(
+                  color: AppColors.lightText, 
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+                bodyMedium: TextStyle(color: AppColors.lightText, fontSize: 16),
+                bodySmall: TextStyle(color: AppColors.greyText, fontSize: 14),
               ),
             ),
-            initialRoute: '/',
-            routes: {
-              '/': (context) => const AuthWrapper(),
-              '/login': (context) => const LoginScreen(),
-              '/home': (context) => const HomeScreen(),
-              '/profile': (context) => const ProfileScreen(),
-            },
+            home: const AuthWrapper(),
           );
         },
       ),
@@ -90,35 +105,29 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    _handleRouting();
-  }
-
-  Future<void> _handleRouting() async {
-    await Future.delayed(const Duration(milliseconds: 2000));
-    final session = Supabase.instance.client.auth.currentSession;
-
-    if (!mounted) return;
-
-    if (session != null) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return const InitialLoadingScreen(initializationError: null);
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        // 1. Loading State
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const InitialLoadingScreen();
+        }
+
+        final session = snapshot.data?.session;
+
+        // 2. Authenticated State
+        if (session != null) {
+          return const HomeNavWrapper();
+        }
+
+        // 3. Unauthenticated State
+        return const LoginScreen();
+      },
+    );
   }
 }

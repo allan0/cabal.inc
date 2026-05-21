@@ -1,16 +1,23 @@
-# airloot
+# Cabal.inc | The Web3 Growth Engine
 
-A new Flutter project.
+Cabal is a premium, wallet-first engagement platform built with **Flutter**, **Supabase**, and **TON/EVM** blockchain integration.
 
-## Getting Started
+## 🚀 Key Features
+- **Wallet-First Auth:** Instant profile provisioning via TON Connect or MetaMask.
+- **Quest Engine:** Complex mission logic with cooldowns and manual verification.
+- **On-Chain Economy:** Integrated NFT Marketplace for tokenized Real Estate and native $CBL tipping.
+- **Creator Tools:** Self-service ERC20 Token Factory and community management dashboard.
 
-This project is a starting point for a Flutter application.
+## 🛠 Tech Stack
+- **Frontend:** Flutter (Web & Mobile)
+- **Backend:** Supabase (Auth, Postgres, Edge Functions)
+- **Blockchain:** TON, Ethereum (Sepolia), and Base.
+- **Infrastructure:** Firebase Hosting & GitHub Actions.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📦 Deployment
+This repository is configured for automatic deployment to Firebase Hosting via GitHub Actions. 
+Ensure the following secrets are set in GitHub:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `WALLET_CONNECT_PROJECT_ID`
+- `FIREBASE_SERVICE_ACCOUNT_CABAL`

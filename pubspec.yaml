@@ -65,6 +65,7 @@ flutter:
     - assets/fonts/
     - assets/audio/
     - .env
+    - config.env
 
   fonts:
     - family: Poppins

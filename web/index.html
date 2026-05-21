@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- CRITICAL: The build tool looks for this exact line -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -15,16 +16,33 @@
   <title>cabal</title>
   <link rel="manifest" href="manifest.json">
 </head>
-<body>
+<body style="background-color: #0F0F0F;">
+  <!-- Loading Indicator for Blank Screen prevention -->
+  <div id="loading" style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #D4AF37; font-family: serif;">
+    <h2>INITIALIZING VAULT...</h2>
+  </div>
+
   <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function(ev) {
-      // Modern Flutter loader style
-      _flutter.loader.load({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+      // 1. Manually set buildConfig to bypass the "buildConfig not set" error in Telegram
+      window._flutter = window._flutter || {};
+      window._flutter.buildConfig = {
+        renderer: "canvaskit",
+        mainEntrypoint: "main.dart.js",
+      };
+
+      // 2. Load the entrypoint
+      _flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: async function(engineInitializer) {
+          const appRunner = await engineInitializer.initializeEngine({
+            renderer: "canvaskit", // Force CanvasKit to bypass SES restrictions
           });
+          
+          // Remove loading text
+          document.getElementById('loading').remove();
+          
+          await appRunner.runApp();
         }
       });
     });

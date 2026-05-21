@@ -1,199 +1,127 @@
-// lib/screens/nft_detail_screen.dart
-import 'package:cabal/models/nft_listing_model.dart';
-import 'package:cabal/services/supabase_service.dart';
-import 'package:cabal/services/web3_service.dart';
-import 'package:cabal/widgets/diamond_mesh_background.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:web3dart/web3dart.dart';
-import '../../features/wallet/application/wallet_provider.dart';
+import '../models/nft_listing_model.dart';
+import '../features/wallet/application/wallet_provider.dart';
+import '../services/web3_service.dart';
 import '../utils/app_colors.dart';
+import '../widgets/diamond_mesh_background.dart';
 
 class NftDetailScreen extends StatefulWidget {
   final NftListing listing;
-  const NftDetailScreen({Key? key, required this.listing}) : super(key: key);
+  const NftDetailScreen({super.key, required this.listing});
 
   @override
   State<NftDetailScreen> createState() => _NftDetailScreenState();
 }
 
 class _NftDetailScreenState extends State<NftDetailScreen> {
-  bool _isBuying = false;
+  bool _isProcessing = false;
 
-  Future<void> _buyNft() async {
-    final walletProvider = context.read<WalletProvider>();
-    final web3Service = context.read<Web3Service>();
-    final supabaseService = context.read<SupabaseService>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
+  Future<void> _handleBuy() async {
+    final wallet = context.read<WalletProvider>();
+    final web3 = context.read<Web3Service>();
 
-    if (!walletProvider.isConnectedEVM) {
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("Please connect your wallet to buy.")));
-      walletProvider.connectEVMWallet(context: context);
+    if (!wallet.isConnectedEVM) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Connect EVM Wallet first")));
       return;
     }
 
-    if (walletProvider.connectedEVMAddress?.toLowerCase() == widget.listing.sellerAddress.toLowerCase()) {
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text("You cannot buy your own listing.")));
-      return;
-    }
-
-    setState(() => _isBuying = true);
+    setState(() => _isProcessing = true);
 
     try {
-      // In a real app, you would have a buildBuyItemTransaction method in your Web3Service
-      // For now, we simulate the logic.
-      final tx = Transaction(
-        to: EthereumAddress.fromHex(web3Service.nftMarketplaceAddress), // Placeholder
-        value: EtherAmount.inWei(BigInt.parse(widget.listing.priceWei)),
-        // data: web3Service.buildBuyItemData(widget.listing.nftContractAddress, widget.listing.tokenId),
+      final tx = web3.buildBuyItemTransaction(
+        senderAddress: wallet.connectedEVMAddress!,
+        nftContractAddress: widget.listing.nftContractAddress,
+        tokenId: widget.listing.tokenId,
+        priceWei: BigInt.parse(widget.listing.priceWei),
       );
-      
-      final txHash = await walletProvider.sendTransaction(tx);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Purchase transaction sent! Waiting for confirmation... Tx: $txHash")));
 
-      // TODO: In a real app, you would wait for the transaction to be mined.
-      await Future.delayed(const Duration(seconds: 5));
-
-      // After successful transaction, update the off-chain cache
-      await supabaseService.deactivateNftListing(widget.listing.id);
-
-      scaffoldMessenger.showSnackBar(SnackBar(
-        content: Text("Purchase successful! You now own ${widget.listing.nftName}."),
-        backgroundColor: AppColors.success,
-      ));
-      
-      navigator.pop(true); // Pop with success to trigger refresh on previous screen
-
+      final txHash = await wallet.sendTransaction(tx);
+      if (txHash != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Purchase Broadcasted: $txHash"), backgroundColor: AppColors.success),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Purchase failed: $e"), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: AppColors.error));
     } finally {
-      if(mounted) setState(() => _isBuying = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final numberFormat = NumberFormat("###,##0.00####", "en_US");
-    final displaySellerAddress = "${widget.listing.sellerAddress.substring(0, 6)}...${widget.listing.sellerAddress.substring(widget.listing.sellerAddress.length - 4)}";
-
     return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(widget.listing.nftName ?? "NFT Details"),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       body: DiamondMeshBackground(
         child: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.only(top: kToolbarHeight + MediaQuery.of(context).padding.top),
-                children: [
-                  Hero(
-                    tag: 'nft_image_${widget.listing.id}',
-                    child: Image.network(
-                      widget.listing.nftImageUrl ?? 'https://via.placeholder.com/400/1E1E1E/FFFFFF?Text=NFT',
-                      height: MediaQuery.of(context).size.width,
-                      width: MediaQuery.of(context).size.width,
-                      fit: BoxFit.cover,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.network(widget.listing.nftImageUrl ?? '', height: 400, width: double.infinity, fit: BoxFit.cover),
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.listing.collectionName ?? 'Unknown Collection', style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text(widget.listing.nftName ?? 'Item #${widget.listing.tokenId}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 24),
+                          const Text("DESCRIPTION", style: TextStyle(fontSize: 12, letterSpacing: 2, color: AppColors.greyText)),
+                          const SizedBox(height: 8),
+                          const Text("This unique digital asset represents verified membership and ownership within the Cabal ecosystem."),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.listing.collectionName ?? 'Unknown Collection',
-                          style: theme.textTheme.titleMedium
-                        ),
-                        Text(
-                          widget.listing.nftName ?? 'Unnamed NFT',
-                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          "Owned by: $displaySellerAddress",
-                          style: theme.textTheme.bodyMedium?.copyWith(fontFamily: 'monospace'),
-                        ),
-                        const Divider(height: 32),
-                        Text("Description", style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 8),
-                        Text(
-                          "This unique digital asset represents a verifiable item within the Cabal ecosystem. Ownership is secured on the blockchain.", // Placeholder description
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                         const SizedBox(height: 16),
-                        // Placeholder for attributes
-                        Text("Attributes", style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 8),
-                        const Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                             Chip(label: Text("Type: Real Estate")),
-                             Chip(label: Text("Location: Genesis City")),
-                          ],
-                        )
-                      ],
-                    ),
-                  )
-                ],
+                  ],
+                ),
               ),
             ),
-            _buildBottomBar(theme, numberFormat),
+            _buildBottomBar(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBottomBar(ThemeData theme, NumberFormat numberFormat) {
-    final walletProvider = context.watch<WalletProvider>();
-    final isOwner = walletProvider.isConnectedEVM && walletProvider.connectedEVMAddress?.toLowerCase() == widget.listing.sellerAddress.toLowerCase();
-    
-    return Material(
-      elevation: 8,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
-        color: theme.cardColor,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.all(24).copyWith(bottom: 40),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Price", style: theme.textTheme.bodyMedium),
-                Row(
-                  children: [
-                    const FaIcon(FontAwesomeIcons.ethereum, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      numberFormat.format(widget.listing.priceInEth),
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
+                const Text("PRICE", style: TextStyle(fontSize: 10, color: AppColors.greyText)),
+                Text("${widget.listing.priceInEth} ETH", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
-            ElevatedButton.icon(
-              icon: _isBuying
-                  ? Container(width: 24, height: 24, padding: const EdgeInsets.all(2.0), child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                  : const Icon(Icons.shopping_cart_checkout_rounded),
-              label: Text(_isBuying ? 'Processing...' : (isOwner ? 'Your Listing' : 'Buy Now')),
-              onPressed: (_isBuying || isOwner) ? null : _buyNft,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                textStyle: theme.textTheme.titleLarge,
-              ),
-            )
-          ],
-        ),
+          ),
+          ElevatedButton(
+            onPressed: _isProcessing ? null : _handleBuy,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(160, 54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isProcessing 
+              ? const CircularProgressIndicator(color: Colors.black)
+              : const Text("BUY NOW", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
