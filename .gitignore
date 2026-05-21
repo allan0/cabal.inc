@@ -18,3 +18,5 @@ build/
 node_modules/
 cabal_all_code.txt
 *.deb
+config.env
+.env
